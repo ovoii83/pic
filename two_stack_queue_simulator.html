@@ -1,0 +1,203 @@
+
+<style>
+  * { box-sizing: border-box; }
+  .wrap { padding: 1rem 0; font-size: 13px; color: var(--color-text-primary); }
+  .stacks-row { display: flex; gap: 24px; align-items: flex-end; justify-content: center; margin-bottom: 1.5rem; }
+  .stack-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .stack-label { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px; }
+  .stack-cap { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+  .stack-slots { display: flex; flex-direction: column-reverse; gap: 3px; }
+  .slot { width: 64px; height: 30px; border: 0.5px solid var(--color-border-secondary); border-radius: 4px; background: var(--color-background-secondary); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; color: var(--color-text-secondary); transition: all 0.3s; }
+  .slot.filled { background: var(--color-background-info); border-color: var(--color-border-info); color: var(--color-text-info); }
+  .slot.top { background: #B5D4F4; border-color: #378ADD; color: #0C447C; }
+  .slot.new { background: #9FE1CB; border-color: #1D9E75; color: #085041; }
+  .slot.transferring { background: #FAC775; border-color: #BA7517; color: #633806; }
+  .arrow-mid { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 40px; gap: 4px; color: var(--color-text-tertiary); font-size: 12px; }
+  .arrow-svg { width: 48px; }
+  .controls { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 1rem; }
+  button { padding: 6px 16px; border: 0.5px solid var(--color-border-secondary); border-radius: 6px; background: var(--color-background-primary); color: var(--color-text-primary); font-size: 13px; cursor: pointer; transition: background .15s; }
+  button:hover { background: var(--color-background-secondary); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--color-background-info); border-color: var(--color-border-info); color: var(--color-text-info); }
+  .msg { text-align: center; font-size: 12px; color: var(--color-text-secondary); min-height: 20px; margin-bottom: 0.75rem; }
+  .msg.warn { color: var(--color-text-warning); }
+  .msg.ok { color: var(--color-text-success); }
+  .stats { display: flex; gap: 12px; justify-content: center; margin-bottom: 1rem; }
+  .stat { background: var(--color-background-secondary); border-radius: 8px; padding: 8px 16px; text-align: center; }
+  .stat-n { font-size: 20px; font-weight: 500; }
+  .stat-l { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+  .queue-vis { display: flex; gap: 3px; justify-content: center; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; min-height: 34px; }
+  .q-item { width: 30px; height: 30px; border-radius: 4px; background: var(--color-background-info); border: 0.5px solid var(--color-border-info); color: var(--color-text-info); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; }
+  .q-front { font-size: 11px; color: var(--color-text-tertiary); }
+  .q-back { font-size: 11px; color: var(--color-text-tertiary); }
+  .divider { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 1rem 0; }
+  .proof { background: var(--color-background-secondary); border-radius: 8px; padding: 12px 16px; font-size: 12px; color: var(--color-text-secondary); line-height: 1.7; }
+  .proof strong { color: var(--color-text-primary); font-weight: 500; }
+  .proof .big { font-size: 18px; font-weight: 500; color: var(--color-text-primary); }
+  .steps-btn { font-size: 12px; padding: 4px 10px; }
+</style>
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="s-total">0</div><div class="stat-l">队列中</div></div>
+    <div class="stat"><div class="stat-n" id="s-s1">0/5</div><div class="stat-l">Stack 1 (入)</div></div>
+    <div class="stat"><div class="stat-n" id="s-s2">0/5</div><div class="stat-l">Stack 2 (出)</div></div>
+    <div class="stat"><div class="stat-n" id="s-deq">0</div><div class="stat-l">已出队</div></div>
+  </div>
+
+  <div class="stacks-row">
+    <div class="stack-col">
+      <div class="stack-label">Stack 1 — 入队栈</div>
+      <div class="stack-slots" id="s1-slots"></div>
+      <div class="stack-cap">容量 5，栈顶在上</div>
+    </div>
+    <div class="arrow-mid">
+      <svg class="arrow-svg" viewBox="0 0 48 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="4" y1="12" x2="40" y2="12" stroke="var(--color-border-secondary)" stroke-width="1"/>
+        <path d="M36 7L42 12L36 17" stroke="var(--color-border-secondary)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span id="transfer-label" style="font-size:11px;color:var(--color-text-tertiary)">S2空时倒入</span>
+    </div>
+    <div class="stack-col">
+      <div class="stack-label">Stack 2 — 出队栈</div>
+      <div class="stack-slots" id="s2-slots"></div>
+      <div class="stack-cap">容量 5，栈顶在上（出口）</div>
+    </div>
+  </div>
+
+  <div class="msg" id="msg">点击操作按钮开始演示</div>
+
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:0.75rem;">
+    <button class="primary" onclick="enqueue()" id="btn-enq">入队 Enqueue</button>
+    <button onclick="dequeue()" id="btn-deq">出队 Dequeue</button>
+    <button class="steps-btn" onclick="autoFill9()" id="btn-9">演示最大容量9</button>
+    <button class="steps-btn" onclick="resetAll()">重置</button>
+  </div>
+
+  <div style="text-align:center;font-size:12px;color:var(--color-text-tertiary);margin-bottom:0.75rem;">
+    队列顺序（前 → 后）：
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;justify-content:center;margin-bottom:1rem;">
+    <span class="q-front">出口</span>
+    <div class="queue-vis" id="q-vis"></div>
+    <span class="q-back">入口</span>
+  </div>
+
+  <hr class="divider"/>
+
+  <div class="proof">
+    <strong>为什么最大是 9，而不是 10？</strong><br>
+    Stack2 获得元素的唯一时机是：<em>出队时 Stack2 为空，将 Stack1 全部倒入</em>。<br>
+    倒入后 Stack1 清空，同时必须弹出 1 个元素完成本次出队。<br>
+    因此 Stack2 最多剩 <strong>4 个</strong>，之后再向 Stack1 压满 <strong>5 个</strong>。<br>
+    <div style="margin-top:8px;text-align:center">
+      <span class="big">4 + 5 = 9</span>
+      <span style="font-size:12px;color:var(--color-text-secondary);margin-left:8px">← 两栈同时存有元素的最大值</span>
+    </div>
+    <div style="margin-top:6px;font-size:11px;color:var(--color-text-tertiary)">
+      若想同时凑到 10，则需要 Stack2 满（5 个）且 Stack1 满（5 个），但倒入后必须弹出 1，Stack2 永远只剩 4。
+    </div>
+  </div>
+</div>
+
+<script>
+  const CAP = 5;
+  let s1 = [], s2 = [], counter = 1, deqCount = 0;
+
+  function render(msgText, msgClass) {
+    const s1el = document.getElementById('s1-slots');
+    const s2el = document.getElementById('s2-slots');
+    s1el.innerHTML = '';
+    s2el.innerHTML = '';
+    for (let i = 0; i < CAP; i++) {
+      const d1 = document.createElement('div');
+      d1.className = 'slot' + (i < s1.length ? (i === s1.length-1 ? ' top' : ' filled') : '');
+      d1.textContent = i < s1.length ? s1[i] : '';
+      s1el.appendChild(d1);
+      const d2 = document.createElement('div');
+      d2.className = 'slot' + (i < s2.length ? (i === s2.length-1 ? ' top' : ' filled') : '');
+      d2.textContent = i < s2.length ? s2[i] : '';
+      s2el.appendChild(d2);
+    }
+    const total = s1.length + s2.length;
+    document.getElementById('s-total').textContent = total;
+    document.getElementById('s-s1').textContent = s1.length + '/5';
+    document.getElementById('s-s2').textContent = s2.length + '/5';
+    document.getElementById('s-deq').textContent = deqCount;
+    document.getElementById('btn-enq').disabled = (s1.length >= CAP && s2.length > 0) || (s1.length >= CAP);
+    document.getElementById('btn-deq').disabled = (total === 0);
+    const msg = document.getElementById('msg');
+    msg.textContent = msgText || '';
+    msg.className = 'msg' + (msgClass ? ' ' + msgClass : '');
+    renderQueue();
+  }
+
+  function renderQueue() {
+    const vis = document.getElementById('q-vis');
+    vis.innerHTML = '';
+    const queue = [...s2].reverse().concat([...s1]);
+    if (queue.length === 0) {
+      const empty = document.createElement('span');
+      empty.style.cssText = 'font-size:12px;color:var(--color-text-tertiary)';
+      empty.textContent = '（空）';
+      vis.appendChild(empty);
+      return;
+    }
+    queue.forEach(v => {
+      const el = document.createElement('div');
+      el.className = 'q-item';
+      el.textContent = v;
+      vis.appendChild(el);
+    });
+  }
+
+  function enqueue() {
+    if (s1.length >= CAP) { render('Stack1 已满，无法入队！', 'warn'); return; }
+    s1.push(counter++);
+    render('入队 ' + (counter-1) + ' → Stack1', 'ok');
+  }
+
+  function dequeue() {
+    if (s1.length === 0 && s2.length === 0) { render('队列为空！', 'warn'); return; }
+    if (s2.length === 0) {
+      if (s1.length > s2.length + CAP - s2.length) { render('无法倒入：Stack2 容量不足', 'warn'); return; }
+      while (s1.length > 0) s2.push(s1.pop());
+      render('Stack2 空 → 将 Stack1 全部倒入 Stack2', '');
+      setTimeout(() => {
+        const v = s2.pop();
+        deqCount++;
+        render('出队 ' + v + ' ← Stack2 弹出', 'ok');
+      }, 500);
+    } else {
+      const v = s2.pop();
+      deqCount++;
+      render('出队 ' + v + ' ← Stack2 弹出', 'ok');
+    }
+  }
+
+  function autoFill9() {
+    resetAll();
+    document.getElementById('btn-9').disabled = true;
+    let step = 0;
+    const steps = [
+      () => { s1 = [1,2,3,4,5]; counter = 6; render('第1步：入队5个元素到 Stack1'); },
+      () => {
+        while (s1.length > 0) s2.push(s1.pop());
+        render('第2步：出队触发 → Stack1 全部倒入 Stack2');
+      },
+      () => { const v = s2.pop(); deqCount++; render('第3步：出队 ' + v + '，Stack2 剩4个'); },
+      () => { s1 = [6,7,8,9,10]; counter = 11; render('第4步：再入队5个到 Stack1 → 总共 9 个！', 'ok'); },
+    ];
+    function next() {
+      if (step < steps.length) { steps[step++](); setTimeout(next, 800); }
+      else { document.getElementById('btn-9').disabled = false; }
+    }
+    next();
+  }
+
+  function resetAll() {
+    s1 = []; s2 = []; counter = 1; deqCount = 0;
+    render('已重置');
+  }
+
+  render('点击操作按钮开始演示');
+</script>
